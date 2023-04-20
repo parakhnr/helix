@@ -21,7 +21,6 @@
 <suite name="Suite" parallel="false">
   <test name="Test" preserve-order="true">
     <packages>
-      <package name="org.apache.helix.lock.*"/>
     </packages>
   </test>
 </suite>

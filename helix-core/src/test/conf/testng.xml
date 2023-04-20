@@ -24,4 +24,49 @@
       <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
     </classes>
   </test>
+  <test name="Test2" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test3" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test4" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test5" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test6" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test7" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test8" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test9" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
+  <test name="Test10" preserve-order="true">
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
+  </test>
 </suite>

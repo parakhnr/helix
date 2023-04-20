@@ -21,7 +21,6 @@ under the License.
 <suite name="Suite" parallel="false">
   <test name="Test" preserve-order="true">
     <packages>
-      <package name="org.apache.helix.view.*"/>
     </packages>
   </test>
 </suite>

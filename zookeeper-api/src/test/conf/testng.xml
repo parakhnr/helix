@@ -21,7 +21,7 @@
 <suite name="Suite" parallel="false" thread-count = "1" preserve-order="true">
   <test name="Test" >
     <packages>
-      <package name="org.apache.helix.zookeeper.*"/>
+
     </packages>
   </test>
 </suite>
