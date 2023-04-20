@@ -180,7 +180,7 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
     }
   }
 
-  @Test
+  @Test(invocationCount = 10)
   public void testClusterStatusMonitorLifecycle() throws Exception {
     // Filter other unrelated clusters' metrics
     final QueryExp exp1 =

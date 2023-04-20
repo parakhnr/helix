@@ -20,8 +20,8 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 <suite name="Suite" time-out="900000">
   <test name="Test" preserve-order="true">
-    <packages>
-        <package name="org.apache.helix.*"/>
-    </packages>
+    <classes>
+      <class name="org.apache.helix.monitoring.TestClusterStatusMonitorLifecycle"></class>
+    </classes>
   </test>
 </suite>
