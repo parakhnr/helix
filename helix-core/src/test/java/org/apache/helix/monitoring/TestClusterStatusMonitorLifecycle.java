@@ -293,7 +293,7 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
             exp1);
 
     boolean result = TestHelper.verify(() -> ManagementFactory.getPlatformMBeanServer()
-        .queryMBeans(new ObjectName("ClusterStatus:*"), exp2).isEmpty(), TestHelper.WAIT_DURATION);
+        .queryMBeans(new ObjectName("ClusterStatus:*"), exp2).isEmpty(), 100);
     Assert.assertTrue(result, "Remaining MBeans: " + ManagementFactory.getPlatformMBeanServer()
         .queryMBeans(new ObjectName("ClusterStatus:*"), exp2).toString());
   }

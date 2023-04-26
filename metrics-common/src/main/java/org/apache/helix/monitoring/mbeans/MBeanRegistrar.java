@@ -93,7 +93,7 @@ public class MBeanRegistrar {
         LOG.warn("MBean {} does not exist. It might have been removed already.",
             objectName.getCanonicalName());
       } catch (JMException e) {
-        LOG.warn("Error in un-registering: " + objectName.getCanonicalName(), e);
+        LOG.error("Error in un-registering: " + objectName.getCanonicalName(), e);
       }
     }
   }
