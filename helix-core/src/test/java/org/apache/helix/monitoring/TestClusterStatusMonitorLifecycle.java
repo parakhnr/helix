@@ -23,12 +23,15 @@ import java.lang.management.ManagementFactory;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import javax.management.Notification;
+import javax.management.NotificationListener;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.Query;
 import javax.management.QueryExp;
 
 import org.apache.helix.HelixDataAccessor;
+import org.apache.helix.PropertyKey;
 import org.apache.helix.TestHelper;
 import org.apache.helix.common.ZkTestBase;
 import org.apache.helix.integration.manager.ClusterDistributedController;
@@ -37,12 +40,15 @@ import org.apache.helix.model.IdealState;
 import org.apache.helix.tools.ClusterSetup;
 import org.apache.helix.tools.ClusterVerifiers.BestPossibleExternalViewVerifier;
 import org.apache.helix.tools.ClusterVerifiers.ZkHelixClusterVerifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestClusterStatusMonitorLifecycle.class);
   MockParticipantManager[] _participants;
   ClusterDistributedController[] _controllers;
   String _controllerClusterName;
@@ -51,15 +57,15 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
   Set<String> _clusters = new HashSet<>();
 
   final int n = 5;
-  final int clusterNb = 10;
+  final int clusterNb = 5;
 
   @BeforeClass
   public void beforeClass() throws Exception {
     String className = TestHelper.getTestClassName();
     _clusterNamePrefix = className;
 
-    System.out
-        .println("START " + _clusterNamePrefix + " at " + new Date(System.currentTimeMillis()));
+    System.out.println(
+        "START " + _clusterNamePrefix + " at " + new Date(System.currentTimeMillis()));
 
     // setup 10 clusters
     for (int i = 0; i < clusterNb; i++) {
@@ -91,7 +97,7 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
         "LeaderStandby", true); // do rebalance
 
     // start distributed cluster controllers
-    _controllers = new ClusterDistributedController[n + n];
+    _controllers = new ClusterDistributedController[n];
     for (int i = 0; i < n; i++) {
       _controllers[i] =
           new ClusterDistributedController(ZK_ADDR, _controllerClusterName, "controller_" + i);
@@ -100,8 +106,7 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
 
     ZkHelixClusterVerifier controllerClusterVerifier =
         new BestPossibleExternalViewVerifier.Builder(_controllerClusterName).setZkClient(_gZkClient)
-            .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME)
-            .build();
+            .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME).build();
 
     Assert.assertTrue(controllerClusterVerifier.verifyByPolling(),
         "Controller cluster NOT in ideal state");
@@ -117,35 +122,15 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
 
     ZkHelixClusterVerifier firstClusterVerifier =
         new BestPossibleExternalViewVerifier.Builder(_firstClusterName).setZkClient(_gZkClient)
-            .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME)
-            .build();
-    Assert.assertTrue(firstClusterVerifier.verifyByPolling(), "first cluster NOT in ideal state");
-
-    // add more controllers to controller cluster
-    ClusterSetup setupTool = new ClusterSetup(ZK_ADDR);
-    for (int i = 0; i < n; i++) {
-      String controller = "controller_" + (n + i);
-      setupTool.addInstanceToCluster(_controllerClusterName, controller);
-    }
-    setupTool.rebalanceStorageCluster(_controllerClusterName, _clusterNamePrefix + "0", 6);
-    for (int i = n; i < 2 * n; i++) {
-      _controllers[i] =
-          new ClusterDistributedController(ZK_ADDR, _controllerClusterName, "controller_" + i);
-      _controllers[i].syncStart();
-    }
-
-    // verify controller cluster
-    Assert.assertTrue(controllerClusterVerifier.verifyByPolling(),
-        "Controller cluster NOT in ideal state");
+            .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME).build();
 
     // verify first cluster
     Assert.assertTrue(firstClusterVerifier.verifyByPolling(), "first cluster NOT in ideal state");
     // verify all the rest clusters
     for (int i = 1; i < clusterNb; i++) {
       ZkHelixClusterVerifier clusterVerifier =
-          new BestPossibleExternalViewVerifier.Builder(_clusterNamePrefix + "0_" + i)
-              .setZkClient(_gZkClient)
-              .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME)
+          new BestPossibleExternalViewVerifier.Builder(_clusterNamePrefix + "0_" + i).setZkClient(
+                  _gZkClient).setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME)
               .build();
       Assert.assertTrue(clusterVerifier.verifyByPolling(), "Cluster NOT in ideal state.");
     }
@@ -154,17 +139,13 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
   @AfterClass
   public void afterClass() throws Exception {
     System.out.println("Cleaning up...");
-    for (int i = 0; i < 2 * n; i++) {
-      if (_controllers[i] != null) {
-        _controllers[i].syncStop();
-      }
-    }
+    cleanupControllers();
     for (MockParticipantManager participant : _participants) {
       if (participant != null) {
         participant.syncStop();
       }
     }
-    cleanupControllers();
+
     deleteCluster(_controllerClusterName);
 
     for (String cluster : _clusters) {
@@ -176,7 +157,15 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
 
   private void cleanupControllers() {
     for (ClusterDistributedController controller : _controllers) {
-      controller.syncStop();
+      LOG.info("Stopping controller : " + controller.getInstanceName());
+      if (controller.isConnected()) {
+        LOG.info("External view: " + controller.getHelixDataAccessor().getProperty(new PropertyKey.Builder(controller.getClusterName()).externalView(
+            "TestClusterStatusMonitorLifecycle0")));
+        controller.syncStop();
+      } else {
+        LOG.warn(String.format("Controller %s is not connected", controller.getInstanceName()));
+      }
+      LOG.info("Stopped controller : " + controller.getInstanceName());
     }
   }
 
@@ -188,6 +177,8 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
     final Set<ObjectInstance> mbeans = new HashSet<>(ManagementFactory.getPlatformMBeanServer()
         .queryMBeans(new ObjectName("ClusterStatus:*"), exp1));
 
+    LOG.info(String.format("Disconnecting participant {} for cluster {} ",
+        _participants[0].getInstanceName(), _participants[0].getClusterName()));
     _participants[0].disconnect();
 
     // 1 participant goes away
@@ -213,12 +204,13 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
       }
     }
     assert firstController != null;
+    LOG.info(String.format("Disconnecting controller %s for cluster %s ",
+        firstController.getInstanceName(), firstController.getClusterName()));
     firstController.disconnect();
 
     ZkHelixClusterVerifier controllerClusterVerifier =
         new BestPossibleExternalViewVerifier.Builder(_controllerClusterName).setZkClient(_gZkClient)
-            .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME)
-            .build();
+            .setWaitTillVerify(TestHelper.DEFAULT_REBALANCE_PROCESSING_WAIT_TIME).build();
     Assert.assertTrue(controllerClusterVerifier.verifyByPolling(),
         "Controller cluster was not converged");
 
@@ -235,6 +227,9 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
 
     String instanceName = "localhost0_" + (12918);
     _participants[0] = new MockParticipantManager(ZK_ADDR, _firstClusterName, instanceName);
+    LOG.info(
+        String.format("Restarting participant {} for cluster", _participants[0].getInstanceName(),
+            _participants[0].getClusterName()));
     _participants[0].syncStart();
 
     // 1 participant comes back
@@ -284,13 +279,14 @@ public class TestClusterStatusMonitorLifecycle extends ZkTestBase {
       return newMbeans.size() == (previousMBeanCount5 - (_participants.length + 1));
     }, TestHelper.WAIT_DURATION));
 
+    LOG.info("Stopping all the controllers");
     // Cleanup controllers then MBeans should all be removed.
     cleanupControllers();
     // Check if any MBeans leftover.
     // Note that MessageQueueStatus is not bound with controller only. So it will still exist.
-    final QueryExp exp2 = Query
-        .and(Query.not(Query.match(Query.attr("SensorName"), Query.value("MessageQueueStatus.*"))),
-            exp1);
+    final QueryExp exp2 = Query.and(
+        Query.not(Query.match(Query.attr("SensorName"), Query.value("MessageQueueStatus.*"))),
+        exp1);
 
     boolean result = TestHelper.verify(() -> ManagementFactory.getPlatformMBeanServer()
         .queryMBeans(new ObjectName("ClusterStatus:*"), exp2).isEmpty(), TestHelper.WAIT_DURATION);

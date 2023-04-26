@@ -630,7 +630,7 @@ public class ClusterStatusMonitor implements ClusterStatusMonitorMBean {
   }
 
   public void reset() {
-    LOG.info("Reset ClusterStatusMonitor");
+    LOG.info("Reset ClusterStatusMonitor " + _clusterName);
     try {
       unregisterAllResources();
       unregisterAllInstances();
